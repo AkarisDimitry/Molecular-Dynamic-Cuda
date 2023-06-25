@@ -1,0 +1,25 @@
+% PARAMETROS DE INTERACCION %
+interaction_type = LJ %flocking,  Coulomb, LJ
+interaction_rcut = 10.5
+interaction_coef01 = [0,1,0]
+interaction_coef02 = [0,-100,0]
+interaction_coef03 = [0,-3,0]
+interaction_shift_style = Displace
+interaction_eps = Displace
+interaction_sigma = Displace
+
+% PARAMETROS DE INTEGRACION %
+integration_type = Velverlet % Velverlet
+integration_dt = 0.01
+integration_N = 20000
+
+% PARAMETROS DE BOX %
+boundary_type = Periodic
+boundary_min = [ -1,-1,-1, 0]
+boundary_max = [ 20, 20, 20, 20]
+boundary_step = 10
+
+% PARAMETROS DE TERMOSTATO %
+thermostat_type = Friction 
+thermostat_coef = 1.0 
+thermostat_dt = 0.05 
