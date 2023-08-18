@@ -4,6 +4,8 @@ import pyopencl as cl
 from THERMOSTAT import *
 from INTERACTION import *
 from Lennard_Jones import *
+from Friction import *
+
 from VelVerlet import *
 from BOUNDARY import *
 from Periodic import *
@@ -19,7 +21,13 @@ class SIMULATION(object):
         self.INFILE = None
 
         self.sistema = None
-        self.interaction = None
+
+        self.interaction_LJ_c = False
+        self.interaction_LJ = None
+
+        self.interaction_friction_c = False
+        self.interaction_friction = None
+
         self.integrator = None
         self.boundary = None
         self.thermostat = None
@@ -35,8 +43,17 @@ class SIMULATION(object):
         # Create device memory
         self.mf = cl.mem_flags
 
-        self.interaction.make(  context =    self.context, 
-                                    N   =    self.POSFILE.N)
+        if self.interaction_LJ_c:
+            self.interaction_LJ.make(   context =    self.context, 
+                                               N   =    self.POSFILE.N,
+                                      boundary_max =    self.boundary.boundary_max)
+
+        if self.interaction_friction_c:
+            self.interaction_friction.make(   context =    self.context, 
+                                                     N   =    self.POSFILE.N,
+                                            boundary_max =    self.boundary.boundary_max)
+
+
         self.integrator.make(  context  =    self.context, )
         self.POSFILE.make(  context     =    self.context, 
                                 mf      =    self.mf)
@@ -49,14 +66,18 @@ class SIMULATION(object):
         for step in range(self.integrator.N):
             # Compute the forces
 
-            self.interaction.compute_forces(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_forces)
-            self.integrator.integrate_step1(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_velocities, self.POSFILE.d_forces)
+            if self.interaction_LJ_c:    self.interaction_LJ.compute_forces(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_velocities, self.POSFILE.d_forces)
+            if self.interaction_friction_c:    self.interaction_friction.compute_forces(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_velocities, self.POSFILE.d_forces)
+            self.integrator.integrate_step1(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_velocities, self.POSFILE.d_forces, self.POSFILE.d_masses)
             
             if step % self.boundary.step == 0:
-                self.boundary.boundary(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_velocities, self.boundary.boundary_min, self.boundary.boundary_max, self.boundary.L )
+                self.boundary.boundary(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_velocities, self.boundary.boundary_max, self.boundary.L )
 
-            self.interaction.compute_forces(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_forces)
-            self.integrator.integrate_step2(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_velocities, self.POSFILE.d_forces)
+            if self.interaction_LJ_c:    self.interaction_LJ.compute_forces(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_velocities, self.POSFILE.d_forces)
+            if self.interaction_friction_c:    self.interaction_friction.compute_forces(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_velocities, self.POSFILE.d_forces)
+            self.integrator.integrate_step2(self.queue, (self.POSFILE.N,), None, self.POSFILE.d_positions, self.POSFILE.d_velocities, self.POSFILE.d_forces, self.POSFILE.d_masses)
+
+            self.thermostat
 
             if step % self.POSFILE.store_data['step'] == 0:
                 print(f"Completed step {step}")
@@ -67,15 +88,28 @@ class SIMULATION(object):
         self.POSFILE.save_OUTFILE('OUTFILE')
 
     def load_thermostat(self, thermostat_type=None, coef=None, dt=None):
-        if thermostat_type == 'Friction':
-            self.thermostat = FriccionCoef(coef=coef, dt=dt)
+        return True
+
+    def load_LennardJones(self, condition=False, sigma=1, eps=1, rcut=10, shift_style='displace'):
+        if condition == True:  
+            LJ = Lennard_Jones()
+            LJ.sigma = sigma
+            LJ.eps = eps 
+            LJ.rcut = rcut
+            LJ.shift_style = shift_style
+
+            self.interaction_LJ_c = True
+            self.interaction_LJ = LJ 
 
         return True
 
-    def load_interaction(self, interaction_type=None):
-        if interaction_type == 'LJ':
-            self.interaction = Lennard_Jones()
-            
+    def load_Friction(self, condition=False, eta=0):
+        if condition == True:  
+            friction = Friction()
+            friction.eta = eta
+
+            self.interaction_friction_c = True 
+            self.interaction_friction = friction 
         return True
 
     def load_integration(self, integration_type=None, integration_dt=None, integration_N=None):
@@ -86,7 +120,7 @@ class SIMULATION(object):
 
     def load_boundary(self, boundary_type=None, boundary_min=None, boundary_max=None, boundary_step=None):
         if boundary_type == 'Periodic':
-            self.boundary = Periodic(   boundary_min=boundary_min, 
+            self.boundary = Periodic(   
                                         boundary_max=boundary_max, 
                                         boundary_type=boundary_type,
                                         boundary_step=boundary_step )
@@ -112,7 +146,14 @@ class SIMULATION(object):
                                 dt = self.INFILE.thermostat_dt, )
 
         # ---- INTERACTION ---- #
-        self.load_interaction( self.INFILE.interaction_type )
+        self.load_LennardJones( condition   = self.INFILE.LennardJones,
+                                sigma       = self.INFILE.LennardJones_sigma,
+                                eps         = self.INFILE.LennardJones_eps,
+                                rcut        = self.INFILE.LennardJones_rcut,
+                                shift_style = self.INFILE.LennardJones_shift_style )
+
+        self.load_Friction( condition   = self.INFILE.Friction,
+                            eta         = self.INFILE.Friction_eta )
 
         # ---- INTEGRATION ---- #
         self.load_integration(  integration_type = self.INFILE.integration_type, 
@@ -121,7 +162,6 @@ class SIMULATION(object):
 
         # ---- BOX ---- #
         self.load_boundary(  boundary_type= self.INFILE.boundary_type, 
-                             boundary_min = self.INFILE.boundary_min, 
                              boundary_max = self.INFILE.boundary_max, )
 
 

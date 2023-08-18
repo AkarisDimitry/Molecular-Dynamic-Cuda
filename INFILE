@@ -1,12 +1,13 @@
 % PARAMETROS DE INTERACCION %
-interaction_type = LJ %flocking,  Coulomb, LJ
-interaction_rcut = 10.5
-interaction_coef01 = [0,1,0]
-interaction_coef02 = [0,-100,0]
-interaction_coef03 = [0,-3,0]
-interaction_shift_style = Displace
-interaction_eps = Displace
-interaction_sigma = Displace
+% LJ potential
+LennardJones = True
+LennardJones_rcut = 10.5
+LennardJones_shift_style = Displace
+LennardJones_eps = 1
+LennardJones_sigma = 1
+% friction
+Friction = True
+Friction_eta = 0.5
 
 % PARAMETROS DE INTEGRACION %
 integration_type = Velverlet % Velverlet
@@ -15,9 +16,9 @@ integration_N = 20000
 
 % PARAMETROS DE BOX %
 boundary_type = Periodic
-boundary_min = [ -1,-1,-1, 0]
-boundary_max = [ 20, 20, 20, 20]
-boundary_step = 10
+boundary_max = [ 30, 30, 30, 30]
+boundary_step = 1
+boundary_cell = 10
 
 % PARAMETROS DE TERMOSTATO %
 thermostat_type = Friction 

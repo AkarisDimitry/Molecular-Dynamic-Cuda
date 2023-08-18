@@ -6,7 +6,7 @@ class Periodic(BOUNDARY):
     """
     Box class
     """
-    def __init__(self, boundary_min=None, boundary_max=None, boundary_type='Periodic', boundary_step=100):
+    def __init__(self, boundary_min=np.array([0,0,0,0]), boundary_max=None, boundary_type='Periodic', boundary_step=100):
         """
         Parameters
         ----------

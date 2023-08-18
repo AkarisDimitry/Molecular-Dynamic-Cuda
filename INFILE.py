@@ -6,20 +6,21 @@ class INFILE(object):
     def __init__(self):
 
         # Initializing all the variables with None
-        self.interaction_type = None
-        self.interaction_rcut = None
-        self.interaction_coef = []
-        self.interaction_shift_style = None
-        self.interaction_eps = None
-        self.interaction_sigma = None
+        self.LennardJones = None
+        self.LennardJones_eps = None
+        self.LennardJones_sigma = None
+        self.LennardJones_rcut = None
+        self.LennardJones_shift_style = None
+
+        self.Friction = None
+        self.Friction_eta = None
 
         self.integration_type = None
         self.integration_dt = None
         self.integration_N = None
 
-        self.boxdata_type = None
-        self.boxdata_min = None
-        self.boxdata_max = None
+        self.boundary_type = None
+        self.boundary_max = None
 
         self.thermostat_type = None
         self.thermostat_coef = None

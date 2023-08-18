@@ -1,4 +1,4 @@
-__kernel void compute_forces(__global float4* positions, __global float4* forces ) 
+__kernel void compute_forces(__global float4* positions, __global float4* velocity, __global float4* forces  ) 
 {
     // Get the global thread ID
     int id = get_global_id(0);
@@ -13,6 +13,10 @@ __kernel void compute_forces(__global float4* positions, __global float4* forces
         {
             // Calculate the displacement vector and distance
             float4 rij = positions[j] - positions[id];
+
+            rij = select(rij, rij - boundary_max, isgreater(rij, 0.5f * boundary_max));
+            rij = select(rij, rij + boundary_max, isless(rij, -0.5f * boundary_max));
+
             float distSqr = dot(rij, rij);
             float distSqr6 = distSqr*distSqr*distSqr;
             float distSqr12 = distSqr6*distSqr6;

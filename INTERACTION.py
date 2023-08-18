@@ -7,6 +7,7 @@ class INTERACTION(object):
     """
     def __init__(self, ):
         self.name = None
+
         self.platform = None
         self.device = None
         self.context = None
@@ -19,6 +20,10 @@ class INTERACTION(object):
 
         # Load and build the OpenCL program
         self.program = None
+
+        self.Bond = False
+        self.Lennard_Jones = False
+        self.Friction = False
 
     def load(self, ):
         pass
